@@ -1,12 +1,5 @@
 #include "eva_clock.h"
 
-#include <string.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
-#include "time.h"
-
 // clang-format off
 static const char characters[EVA_CLOCK_CHARS] = {
   'I','T','L','I','S','P','F','E', 'D','E','W',  // 0 - 1
@@ -62,7 +55,7 @@ static const char* TAG = "clock";
 
 void clock_start(void) { clock_semaphore = xSemaphoreCreateMutexStatic(&clock_semaphore_buffer); }
 
-void clock_loop(void* param) {
+void clock_loop(void*) {
   ESP_LOGI(TAG, "clock_loop starting");
 
   time_t rawtime;
@@ -80,7 +73,7 @@ void clock_loop(void* param) {
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 
-  ESP_LOGI(TAG, "clock_loop exited");
+  ESP_LOGW(TAG, "clock_loop exited");
 }
 
 void clock_get(clockbits copy[EVA_CLOCK_LAYERS]) {
@@ -151,7 +144,7 @@ void set_names(clockbits a, struct tm* time) {
     or_leds(a, names[Mart]);
   }
 
-  if (true) {
+  if (time->tm_mon == 3 && time->tm_mday == 1) {
     or_leds(a, names[June]);
   }
 
