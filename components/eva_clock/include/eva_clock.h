@@ -56,7 +56,7 @@ enum Words {
   Fede,
   Mart,
   June,
-  Eva,
+  Greg,
   FM,
 };
 
