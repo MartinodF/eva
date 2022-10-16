@@ -66,8 +66,10 @@ void led_loop(void *) {
   for (;;) {
     clock_get(bits);
 
-    // print_chars(bits[0]);
-    // print_chars(bits[1]);
+    if (EVA_LED_DEBUG_FRAMES) {
+      print_chars(bits[0]);
+      print_chars(bits[1]);
+    }
 
     has_extra = false;
 
