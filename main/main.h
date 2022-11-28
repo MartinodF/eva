@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "eva_clock.h"
+#include "eva_debug.h"
 #include "eva_light.h"
 #include "eva_sntp.h"
 #include "eva_status.h"

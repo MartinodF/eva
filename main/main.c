@@ -29,4 +29,10 @@ void app_main(void) {
   configASSERT(status_handle);
   xTaskCreate(light_loop, "light_loop", STACK_SIZE, NULL, 1UL, &light_handle);
   configASSERT(light_handle);
+
+#if CONFIG_LOG_DEFAULT_LEVEL >= 4  // ESP_LOG_DEBUG
+  TaskHandle_t debug_handle = NULL;
+  xTaskCreate(debug_loop, "debug_loop", STACK_SIZE, NULL, 1UL, &debug_handle);
+  configASSERT(debug_handle);
+#endif
 }
