@@ -155,6 +155,12 @@ void set_names(clockbits a, struct tm* time) {
   if (time->tm_mon == 8 && time->tm_mday == 15) {
     or_leds(a, names[FM]);
   }
+
+  if (EVA_CLOCK_DEBUG) {
+    int all[5] = {Fede, Mart, June, Greg, FM};
+    int name = all[time->tm_min % 5];
+    or_leds(a, names[name]);
+  }
 }
 
 void set_time(clockbits a, struct tm* time) {

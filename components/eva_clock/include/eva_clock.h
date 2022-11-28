@@ -20,6 +20,7 @@
 #define EVA_CLOCK_MASK_SIZE 2
 #define EVA_CLOCK_LAYERS 2
 #define EVA_CLOCK_LEDS_SIZE 4
+#define EVA_CLOCK_DEBUG true
 
 typedef uint8_t clockbits[EVA_CLOCK_WORD_COUNT];
 
