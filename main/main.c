@@ -35,4 +35,13 @@ void app_main(void) {
   xTaskCreate(debug_loop, "debug_loop", STACK_SIZE, NULL, 1UL, &debug_handle);
   configASSERT(debug_handle);
 #endif
+
+  esp_pm_config_esp32s3_t pm_config = {
+    .max_freq_mhz = 160,
+    .min_freq_mhz = 160,
+#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+    .light_sleep_enable = true
+#endif
+  };
+  ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
 }

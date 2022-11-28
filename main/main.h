@@ -1,5 +1,6 @@
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_pm.h"
 #include "esp_system.h"
 #include "eva_clock.h"
 #include "eva_debug.h"
