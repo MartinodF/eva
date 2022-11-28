@@ -14,14 +14,19 @@ void app_main(void) {
   wifi_start();
   sntp_start();
   clock_start();
+  light_start();
 
   TaskHandle_t clock_handle = NULL;
   TaskHandle_t led_handle = NULL;
   TaskHandle_t status_handle = NULL;
+  TaskHandle_t light_handle = NULL;
+
   xTaskCreate(clock_loop, "clock_loop", STACK_SIZE, NULL, 1UL, &clock_handle);
   configASSERT(clock_handle);
   xTaskCreate(led_loop, "led_loop", STACK_SIZE, NULL, 2UL, &led_handle);
   configASSERT(led_handle);
   xTaskCreate(status_loop, "status_loop", STACK_SIZE, NULL, 1UL, &status_handle);
   configASSERT(status_handle);
+  xTaskCreate(light_loop, "light_loop", STACK_SIZE, NULL, 1UL, &light_handle);
+  configASSERT(light_handle);
 }

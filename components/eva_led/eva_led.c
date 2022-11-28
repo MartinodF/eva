@@ -1,7 +1,9 @@
 #include "eva_led.h"
 
+static int light;
 static clockbits bits[EVA_CLOCK_LAYERS];
 static uint8_t pixels[EVA_CLOCK_CHARS * EVA_LED_COLORS];  // GRBW
+static float fading[EVA_CLOCK_CHARS * 2];                 // W + GRB brightness
 
 static const char *TAG = "led";
 
@@ -52,6 +54,8 @@ void hs2rgb(uint32_t h, uint32_t s, uint32_t *r, uint32_t *g, uint32_t *b) {
 void led_loop(void *) {
   ESP_LOGI(TAG, "led_loop starting");
 
+  gpio_set_direction(EVA_ONBOARD_GPIO_NUM, GPIO_MODE_OUTPUT);
+
   rmt_leds_handle_t leds = NULL;
   ESP_ERROR_CHECK(rmt_new_leds(EVA_LED_GPIO_NUM, EVA_CLOCK_CHARS, pixels, &leds));
 
@@ -61,30 +65,25 @@ void led_loop(void *) {
   uint32_t g;
   uint32_t b;
   uint16_t hue = 0;
-  bool has_extra;
+  float scale;
 
   for (;;) {
+    gpio_set_level(EVA_ONBOARD_GPIO_NUM, 1);
+
     clock_get(bits);
+    light_get(&light);
+
+    hs2rgb(hue, 100, &r, &g, &b);
+    scale = 0.08f + 0.92f * light / 4095;
 
     if (EVA_LED_DEBUG_FRAMES) {
       print_chars(bits[0]);
       print_chars(bits[1]);
     }
 
-    has_extra = false;
-
     for (int i = 0; i < EVA_CLOCK_CHARS; i++) {
       bool base = has_bit(bits[0], i);
       bool extra = has_bit(bits[1], i);
-
-      if (extra) {
-        has_extra = true;
-        hs2rgb(hue, 100, &r, &g, &b);
-      } else {
-        r = 0;
-        g = 0;
-        b = 0;
-      }
 
       // Rows alternate in a zig-zag pattern
       int row = i / EVA_CLOCK_WIDTH;
@@ -92,20 +91,22 @@ void led_loop(void *) {
 
       int led = row * EVA_CLOCK_WIDTH + column;
 
-      pixels[led * EVA_LED_COLORS + 0] = g * EVA_LED_BRIGHTNESS;                  // G
-      pixels[led * EVA_LED_COLORS + 1] = r * EVA_LED_BRIGHTNESS;                  // R
-      pixels[led * EVA_LED_COLORS + 2] = b * EVA_LED_BRIGHTNESS;                  // B
-      pixels[led * EVA_LED_COLORS + 3] = (base ? 0xff : 0) * EVA_LED_BRIGHTNESS;  // W
+      // Smooth out changes in brightness
+      fading[led * 2 + 0] = 0.9f * fading[led * 2 + 0] + 0.1f * (base ? scale : 0);
+      fading[led * 2 + 1] = 0.9f * fading[led * 2 + 1] + 0.1f * (extra ? scale : 0);
+
+      pixels[led * EVA_LED_COLORS + 0] = g * fading[led * 2 + 1];     // G
+      pixels[led * EVA_LED_COLORS + 1] = r * fading[led * 2 + 1];     // R
+      pixels[led * EVA_LED_COLORS + 2] = b * fading[led * 2 + 1];     // B
+      pixels[led * EVA_LED_COLORS + 3] = 0xff * fading[led * 2 + 0];  // W
     }
 
     ESP_ERROR_CHECK(rmt_leds_send(leds));
 
-    if (has_extra) {
-      hue += 1;
-      vTaskDelay(pdMS_TO_TICKS(80));
-    } else {
-      vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    hue += 1;
+
+    gpio_set_level(EVA_ONBOARD_GPIO_NUM, 0);
+    vTaskDelay(pdMS_TO_TICKS(EVA_LED_INTERVAL));
   }
 
   ESP_ERROR_CHECK(rmt_leds_del(leds));

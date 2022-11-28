@@ -22,10 +22,10 @@ void status_loop(void*) {
     ok = sntp && wifi;
     partial = sntp || wifi;
 
-    pixel[0] = (ok ? 0xff : partial ? 0xff : 0x00) * EVA_LED_BRIGHTNESS;  // G
-    pixel[1] = (ok ? 0x00 : partial ? 0xff : 0xff) * EVA_LED_BRIGHTNESS;  // R
-    pixel[2] = (ok ? 0x00 : partial ? 0x00 : 0x00) * EVA_LED_BRIGHTNESS;  // B
-    pixel[3] = 0 * EVA_LED_BRIGHTNESS;                                    // W
+    pixel[0] = (ok ? 0xff : partial ? 0xff : 0x00) * EVA_STATUS_BRIGHTNESS;  // G
+    pixel[1] = (ok ? 0x00 : partial ? 0xff : 0xff) * EVA_STATUS_BRIGHTNESS;  // R
+    pixel[2] = (ok ? 0x00 : partial ? 0x00 : 0x00) * EVA_STATUS_BRIGHTNESS;  // B
+    pixel[3] = 0 * EVA_STATUS_BRIGHTNESS;                                    // W
 
     ESP_ERROR_CHECK(rmt_leds_send(led));
 
