@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "driver/rmt_encoder.h"
+#include "esp_attr.h"
 #include "esp_check.h"
 #include "eva_leds.h"
 

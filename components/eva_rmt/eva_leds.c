@@ -3,9 +3,15 @@
 static const char *TAG = "leds";
 
 esp_err_t rmt_leds_send(rmt_leds_t *leds) {
+  ESP_RETURN_ON_ERROR(rmt_enable(leds->channel), TAG, "failed to enable RMT channel");
+
   ESP_RETURN_ON_ERROR(
       rmt_transmit(leds->channel, leds->encoder, leds->pixels, leds->count * EVA_RMT_BYTES_PER_LED, &leds->tx_config),
       TAG, "failed to transmit RMT");
+
+  ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(leds->channel, 50), TAG, "error while waiting for RMT TX to finish");
+
+  ESP_RETURN_ON_ERROR(rmt_disable(leds->channel), TAG, "failed to disable RMT channel");
 
   return ESP_OK;
 }
@@ -29,15 +35,13 @@ esp_err_t rmt_new_leds(int gpio, int count, const void *pixels, rmt_leds_handle_
   int symbols = (count >= 48) ? ((count % 2 == 0) ? count : count + 1) : 48;
 
   rmt_tx_channel_config_t config = {
-      .clk_src = RMT_CLK_SRC_DEFAULT,
+      .clk_src = RMT_CLK_SRC_XTAL,
       .gpio_num = gpio,
       .mem_block_symbols = symbols,  // symbols * 4 bytes
       .resolution_hz = EVA_RMT_RESOLUTION_HZ,
-      .trans_queue_depth = 2,
+      .trans_queue_depth = 16,
   };
   ESP_GOTO_ON_ERROR(rmt_new_tx_channel(&config, &leds->channel), err, TAG, "failed to create RMT TX channel");
-
-  ESP_GOTO_ON_ERROR(rmt_enable(leds->channel), err, TAG, "failed to enable RMT channel");
 
   ESP_GOTO_ON_ERROR(rmt_new_encoder(&leds->encoder), err, TAG, "failed to create RMT encoder");
 

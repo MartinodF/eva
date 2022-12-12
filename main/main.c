@@ -1,5 +1,20 @@
 #include "main.h"
 
+static esp_timer_handle_t startup_timer;
+
+static const char* TAG = "main";
+
+static void handle_touch(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+  if (event_id == EVA_TOUCH_TRIPLETAP) {
+    esp_restart();
+  }
+}
+
+static void startup_timer_cb(void* param) {
+  ESP_LOGI(TAG, "startup_timer triggered");
+  ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_BOOTED, NULL, 0, portMAX_DELAY));
+}
+
 void app_main(void) {
   // Initialize NVS
   esp_err_t ret = nvs_flash_init();
@@ -11,37 +26,34 @@ void app_main(void) {
 
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  wifi_start();
-  sntp_start();
-  clock_start();
-  light_start();
-
-  TaskHandle_t clock_handle = NULL;
-  TaskHandle_t led_handle = NULL;
-  TaskHandle_t status_handle = NULL;
-  TaskHandle_t light_handle = NULL;
-
-  xTaskCreate(clock_loop, "clock_loop", STACK_SIZE, NULL, 1UL, &clock_handle);
-  configASSERT(clock_handle);
-  xTaskCreate(led_loop, "led_loop", STACK_SIZE, NULL, 2UL, &led_handle);
-  configASSERT(led_handle);
-  xTaskCreate(status_loop, "status_loop", STACK_SIZE, NULL, 1UL, &status_handle);
-  configASSERT(status_handle);
-  xTaskCreate(light_loop, "light_loop", STACK_SIZE, NULL, 1UL, &light_handle);
-  configASSERT(light_handle);
+  const esp_timer_create_args_t timer_args = {.callback = &startup_timer_cb, .name = "startup-done"};
+  ESP_ERROR_CHECK(esp_timer_create(&timer_args, &startup_timer));
+  ESP_ERROR_CHECK(esp_timer_start_once(startup_timer, STARTUP_TIME * 1000));
 
 #if CONFIG_LOG_DEFAULT_LEVEL >= 4  // ESP_LOG_DEBUG
-  TaskHandle_t debug_handle = NULL;
-  xTaskCreate(debug_loop, "debug_loop", STACK_SIZE, NULL, 1UL, &debug_handle);
-  configASSERT(debug_handle);
+  configASSERT(xTaskCreate(debug_loop, "debug_loop", STACK_SIZE, NULL, 1UL, NULL) == pdTRUE);
 #endif
 
-  esp_pm_config_esp32s3_t pm_config = {
-    .max_freq_mhz = 160,
-    .min_freq_mhz = 160,
-#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
-    .light_sleep_enable = true
-#endif
-  };
-  ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+  // Initialize status LED
+  status_start();
+
+  // Initialize LED strip
+  configASSERT(xTaskCreate(led_loop, "led_loop", STACK_SIZE, NULL, 2UL, NULL) == pdTRUE);
+
+  // Initialize display
+  display_start();
+
+  // Initialize string display and show "Hi"
+  strings_start();
+
+  // Initialize all other components
+  wifi_start();
+  sntp_start();
+
+  configASSERT(xTaskCreate(light_loop, "light_loop", STACK_SIZE, NULL, 1UL, NULL) == pdTRUE);
+  configASSERT(xTaskCreate(temp_loop, "temp_loop", STACK_SIZE, NULL, 1UL, NULL) == pdTRUE);
+  configASSERT(xTaskCreate(clock_loop, "clock_loop", STACK_SIZE, NULL, 1UL, NULL) == pdTRUE);
+  configASSERT(xTaskCreate(touch_loop, "touch_loop", STACK_SIZE, NULL, 1UL, NULL) == pdTRUE);
+
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_TOUCH_TRIPLETAP, handle_touch, NULL, NULL));
 }

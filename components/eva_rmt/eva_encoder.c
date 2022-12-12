@@ -8,8 +8,8 @@
 
 static const char *TAG = "encoder";
 
-static size_t rmt_encode(rmt_encoder_t *sub_encoder, rmt_channel_handle_t channel, const void *primary_data,
-                         size_t data_size, rmt_encode_state_t *ret_state) {
+static size_t IRAM_ATTR rmt_encode(rmt_encoder_t *sub_encoder, rmt_channel_handle_t channel, const void *primary_data,
+                                   size_t data_size, rmt_encode_state_t *ret_state) {
   rmt_combo_encoder_t *encoder = __containerof(sub_encoder, rmt_combo_encoder_t, combo);
   rmt_encoder_handle_t bytes = encoder->bytes;
   rmt_encoder_handle_t copy = encoder->copy;
@@ -20,7 +20,7 @@ static size_t rmt_encode(rmt_encoder_t *sub_encoder, rmt_channel_handle_t channe
   size_t encoded_symbols = 0;
 
   switch (encoder->state) {
-    case 0:  // send RGB data
+    case 0:  // send RGBW data
       encoded_symbols += bytes->encode(bytes, channel, primary_data, data_size, &session_state);
 
       if (session_state & RMT_ENCODING_COMPLETE) {
@@ -51,7 +51,7 @@ out:
   return encoded_symbols;
 }
 
-static esp_err_t rmt_del(rmt_encoder_t *sub_encoder) {
+static esp_err_t IRAM_ATTR rmt_del(rmt_encoder_t *sub_encoder) {
   rmt_combo_encoder_t *encoder = __containerof(sub_encoder, rmt_combo_encoder_t, combo);
   rmt_del_encoder(encoder->bytes);
   rmt_del_encoder(encoder->copy);
@@ -59,7 +59,7 @@ static esp_err_t rmt_del(rmt_encoder_t *sub_encoder) {
   return ESP_OK;
 }
 
-static esp_err_t rmt_reset(rmt_encoder_t *sub_encoder) {
+static esp_err_t IRAM_ATTR rmt_reset(rmt_encoder_t *sub_encoder) {
   rmt_combo_encoder_t *encoder = __containerof(sub_encoder, rmt_combo_encoder_t, combo);
   rmt_encoder_reset(encoder->bytes);
   rmt_encoder_reset(encoder->copy);

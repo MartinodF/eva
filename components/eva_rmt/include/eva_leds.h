@@ -5,7 +5,7 @@
 #include "eva_encoder.h"
 
 #define EVA_RMT_BYTES_PER_LED 4
-#define EVA_RMT_RESOLUTION_HZ 20000000UL  // 20MHz resolution, 1 tick = 0.05us
+#define EVA_RMT_RESOLUTION_HZ 5000000UL  // 5MHz resolution, 1 tick = 0.2us
 
 typedef struct rmt_leds_t {
   rmt_channel_handle_t channel;

@@ -84,7 +84,7 @@ exit:  // Common return path
   return ret;
 }
 
-void debug_loop(void *) {
+void debug_loop(void *unused) {
   ESP_LOGI(TAG, "debug_loop starting");
 
   for (;;) {
