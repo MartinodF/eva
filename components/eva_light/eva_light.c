@@ -1,9 +1,15 @@
 #include "eva_light.h"
 
 static int current = 0;
-static int raw[EVA_LIGHT_MEASUREMENTS];
+static int raw = 0;
+static int values[EVA_LIGHT_MEASUREMENTS];
 
 static const char *TAG = "light";
+
+static int clamp(int d, int min, int max) {
+  const int t = d < min ? min : d;
+  return t > max ? max : t;
+}
 
 void light_loop(void *unused) {
   ESP_LOGI(TAG, "light_loop starting");
@@ -24,19 +30,22 @@ void light_loop(void *unused) {
   int average;
 
   for (;;) {
-    ESP_ERROR_CHECK(adc_oneshot_read(adc, EVA_LIGHT_ADC_CHANNEL, &raw[current]));
+    ESP_ERROR_CHECK(adc_oneshot_read(adc, EVA_LIGHT_ADC_CHANNEL, &raw));
 
-    if (abs(raw[current] - average) > EVA_LIGHT_THRESHOLD) {
+    // Re-scale MIN-MAX to 0-100
+    values[current] = 100 * (clamp(raw, EVA_LIGHT_MIN, EVA_LIGHT_MAX) - EVA_LIGHT_MIN) / EVA_LIGHT_MAX;
+
+    if (abs(values[current] - average) > EVA_LIGHT_THRESHOLD) {
       average = 0;
 
       for (int i = 0; i < EVA_LIGHT_MEASUREMENTS; i++) {
-        average += raw[i];
+        average += values[i];
       }
 
       average /= EVA_LIGHT_MEASUREMENTS;
 
       ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_LIGHT_UPDATE, &average, sizeof(average), portMAX_DELAY));
-      ESP_LOGI(TAG, "level: %d/4095", average);
+      ESP_LOGI(TAG, "level: %d/100", average);
     }
 
     current = (current + 1) % EVA_LIGHT_MEASUREMENTS;

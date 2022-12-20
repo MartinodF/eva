@@ -142,8 +142,9 @@ void led_loop(void *unused) {
   for (;;) {
     gpio_set_level(EVA_ONBOARD_GPIO_NUM, 1);
 
+    // LED brightness varies from 3% to 55% depending on measured light
     float_t light_t = tween(time, light_time, EVA_LED_FADE_DURATION);
-    float_t scale = 0.08f + 0.92f * interpolate(light_t, light_prev, light_end) / 4095;
+    float_t scale = 0.03f + 0.52f * interpolate(light_t, light_prev, light_end) / 100;
 
     if (xSemaphoreTake(fade_barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
       ESP_LOGW(TAG, "failed acquiring lock to update LEDs");

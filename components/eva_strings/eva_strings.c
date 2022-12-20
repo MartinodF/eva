@@ -49,7 +49,7 @@ static void render_number(int value, frame buffer) {
 }
 
 static void light_update(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
-  int value = *((int *)event_data) * 100 / 4096;
+  int value = *((int *)event_data);
 
   frame_event_t event = {.layer = LayerLight};
   render_number(value, event.mem);
