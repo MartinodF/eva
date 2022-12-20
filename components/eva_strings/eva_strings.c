@@ -74,10 +74,17 @@ static void status_update(void *arg, esp_event_base_t event_base, int32_t event_
 }
 
 void strings_start() {
+  // Setup a few initial frames
   frame_event_t event = {.layer = LayerBooting};
-  char greeting[2] = {'H', 'I'};
-  render_string(greeting, event.mem);
 
+  char string[2] = {'H', 'I'};
+  render_string(string, event.mem);
+  ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_FRAME_EMIT, &event, sizeof(event), portMAX_DELAY));
+
+  event.layer = LayerStatus;
+  string[0] = 'W';
+  string[1] = 'I';
+  render_string(string, event.mem);
   ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_FRAME_EMIT, &event, sizeof(event), portMAX_DELAY));
 
   ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_LIGHT_UPDATE, light_update, NULL, NULL));
