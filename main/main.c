@@ -47,6 +47,7 @@ void app_main(void) {
   strings_start();
 
   // Initialize all other components
+  celebrate_start();
   wifi_start();
   sntp_start();
 

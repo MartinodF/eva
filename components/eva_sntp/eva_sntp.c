@@ -6,7 +6,7 @@ static esp_timer_handle_t sntp_expired_timer;
 
 static const char* TAG = "sntp";
 
-void sntp_sync_cb(struct timeval* tv) {
+static void sntp_sync_cb(struct timeval* tv) {
   ESP_LOGI(TAG, "sntp_sync");
   sntp_last_sync = esp_timer_get_time();
   ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_SNTP_HEALTHY, NULL, 0, portMAX_DELAY));
@@ -16,12 +16,12 @@ void sntp_sync_cb(struct timeval* tv) {
   ESP_ERROR_CHECK(esp_timer_start_once(sntp_expired_timer, EVA_SNTP_INTERVAL * 2 * 1000));
 }
 
-void sntp_timer_cb(void* param) {
+static void sntp_timer_cb(void* param) {
   ESP_LOGW(TAG, "sntp_timer expired, time might be drifting");
   ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_SNTP_UNHEALTHY, NULL, 0, portMAX_DELAY));
 }
 
-void sntp_wifi_cb() {
+static void sntp_wifi_cb() {
   ESP_LOGI(TAG, "sntp_wifi");
 
   vTaskDelay(pdMS_TO_TICKS(10));

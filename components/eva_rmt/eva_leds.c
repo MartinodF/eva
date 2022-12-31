@@ -9,7 +9,7 @@ esp_err_t rmt_leds_send(rmt_leds_t *leds) {
       rmt_transmit(leds->channel, leds->encoder, leds->pixels, leds->count * EVA_RMT_BYTES_PER_LED, &leds->tx_config),
       TAG, "failed to transmit RMT");
 
-  ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(leds->channel, 50), TAG, "error while waiting for RMT TX to finish");
+  ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(leds->channel, -1), TAG, "error while waiting for RMT TX to finish");
 
   ESP_RETURN_ON_ERROR(rmt_disable(leds->channel), TAG, "failed to disable RMT channel");
 

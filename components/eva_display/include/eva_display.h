@@ -4,6 +4,7 @@
 
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "eva_event.h"
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
@@ -14,7 +15,18 @@
 #define EVA_DISPLAY_WORD_SIZE 8
 #define EVA_DISPLAY_WORD_COUNT CEILING(EVA_DISPLAY_PIXELS, EVA_DISPLAY_WORD_SIZE)
 
-enum Layer { LayerBooting, LayerClock, LayerEvents, LayerStatus, LayerLight, LayerTemp, LayersCount };
+enum Layer {
+  LayerClock,
+  LayerStatus,
+  LayerLight,
+  LayerTemp,
+  LayersVisible,
+  LayerBooting,
+  LayerCountdown,
+  LayerEvents,
+  LayersCount
+};
+
 enum Pixel {
   Off = 0,
   White = (1 << 0),

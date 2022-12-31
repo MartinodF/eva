@@ -2,6 +2,8 @@
 
 #include "esp_event.h"
 
+#define STACK_SIZE 4096
+
 ESP_EVENT_DECLARE_BASE(EVA_EVENT);
 
 enum {

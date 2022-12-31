@@ -9,4 +9,7 @@
 
 enum Mode { Hi, Status, Light, Temp, ModeCount };
 
+void strings_animate(char *string, uint8_t times, int layer);
+void strings_set(char value[2], int layer);
+void strings_set_int(int value, int layer);
 void strings_start();

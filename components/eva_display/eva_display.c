@@ -17,7 +17,9 @@ static const char characters[EVA_DISPLAY_PIXELS] = {
 // clang-format on
 #endif
 
-static int current_layer = LayerBooting;
+static esp_timer_handle_t override_timer;
+static int current_layer = LayerClock;
+static int override_layer = LayerBooting;
 static buffer fb;
 static bool healthy = false;
 static pixels visible;
@@ -34,14 +36,16 @@ static bool has_bit(frame a, int n) {
 static void emit_refresh() {
   memset(&visible, 0, sizeof(visible));
 
+  int layer = (override_layer != LayersCount) ? override_layer : current_layer;
+
   for (int i = 0; i < EVA_DISPLAY_PIXELS; i++) {
-    switch (current_layer) {
+    switch (layer) {
       case LayerClock:
         visible[i] = (has_bit(fb[LayerClock], i) ? White : Off) | (has_bit(fb[LayerEvents], i) ? Rainbow : Off);
         break;
 
       default:
-        visible[i] = has_bit(fb[current_layer], i) ? Rainbow : Off;
+        visible[i] = has_bit(fb[layer], i) ? Rainbow : Off;
         break;
     }
   }
@@ -86,6 +90,17 @@ static void handle_frame(void* arg, esp_event_base_t event_base, int32_t event_i
   print_buffer();
 #endif
 
+  // Countdown layer automatically overrides others for 2 seconds
+  if (event->layer == LayerCountdown) {
+    override_layer = LayerCountdown;
+
+    if (esp_timer_is_active(override_timer)) {
+      ESP_ERROR_CHECK(esp_timer_stop(override_timer));
+    }
+
+    ESP_ERROR_CHECK(esp_timer_start_once(override_timer, 2000 * 1000));
+  }
+
   if (!event->skip_emit) {
     emit_refresh();
   }
@@ -99,11 +114,19 @@ static void display_layer(int layer) {
   emit_refresh();
 }
 
+static void override_timer_cb(void* unused) {
+  ESP_LOGD(TAG, "override timer elapsed");
+
+  override_layer = LayersCount;
+  display_layer(current_layer);
+}
+
 static void handle_boot(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
   if (healthy) {
-    display_layer(LayerClock);
+    override_timer_cb(0);
   } else {
-    display_layer(LayerStatus);
+    override_layer = LayerStatus;
+    emit_refresh();
   }
 }
 
@@ -111,20 +134,16 @@ static void handle_status(void* arg, esp_event_base_t event_base, int32_t event_
   healthy = event_id == EVA_STATUS_HEALTHY;
 
   if (healthy) {
-    display_layer(LayerClock);
-  } else if (current_layer != LayerBooting) {
-    display_layer(LayerStatus);
+    override_timer_cb(0);
+  } else if (override_layer != LayerBooting) {
+    override_layer = LayerStatus;
+    emit_refresh();
   }
 }
 
 static void handle_touch(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
   if (event_id == EVA_TOUCH_TAP) {
-    int next = (current_layer + 1) % LayersCount;
-
-    if ((next == LayerBooting) || (next == LayerEvents)) {
-      next++;
-    }
-
+    int next = (current_layer + 1) % LayersVisible;
     display_layer(next);
   } else if (event_id == EVA_TOUCH_HOLD) {
     display_layer(LayerClock);
@@ -133,6 +152,9 @@ static void handle_touch(void* arg, esp_event_base_t event_base, int32_t event_i
 
 void display_start(void) {
   ESP_LOGI(TAG, "display_start");
+
+  const esp_timer_create_args_t timer_args = {.callback = &override_timer_cb, .name = "override-timer"};
+  ESP_ERROR_CHECK(esp_timer_create(&timer_args, &override_timer));
 
   ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_BOOTED, handle_boot, NULL, NULL));
   ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_FRAME_EMIT, handle_frame, NULL, NULL));
