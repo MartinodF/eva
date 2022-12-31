@@ -22,7 +22,7 @@ void temp_loop(void* unused) {
     if (fabs(raw[current] - average) > EVA_TEMP_THRESHOLD) {
       average = 0.0f;
 
-      for (int i = 0; i < EVA_TEMP_MEASUREMENTS; i++) {
+      for (size_t i = 0; i < EVA_TEMP_MEASUREMENTS; i++) {
         average += raw[i];
       }
 

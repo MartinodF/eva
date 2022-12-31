@@ -27,7 +27,7 @@ static const clockmask words[] = {
 static const char* TAG = "clock";
 
 static void or_time(frame buffer, const clockmask* time) {
-  for (int i = 0; i < EVA_CLOCK_MASK_SIZE; i++) {
+  for (size_t i = 0; i < EVA_CLOCK_MASK_SIZE; i++) {
     buffer[time->offset + i] |= time->words[i];
   }
 }

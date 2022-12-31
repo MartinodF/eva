@@ -26,7 +26,7 @@ static void or_bit(frame buffer, int n) {
 }
 
 static void or_name(frame buffer, const leds name) {
-  for (int i = 0; i < EVA_CELEBRATE_NAME_LENGTH; i++) {
+  for (size_t i = 0; i < EVA_CELEBRATE_NAME_LENGTH; i++) {
     if (name[i] < 0) {
       continue;
     }
@@ -38,7 +38,7 @@ static void or_name(frame buffer, const leds name) {
 static void set_names(frame buffer, struct tm* time) {
   int length = sizeof(celebrations) / sizeof(celebrations[0]);
 
-  for (int i = 0; i < length; i++) {
+  for (size_t i = 0; i < length; i++) {
     if (time->tm_mon == celebrations[i].month && time->tm_mday == celebrations[i].day) {
       if (celebrations[i].name < 0) {
         continue;
@@ -62,7 +62,7 @@ static void celebrate_loop(void* unused) {
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    for (int i = 0; i < length; i++) {
+    for (size_t i = 0; i < length; i++) {
       if (celebrations[i].trigger < rawtime) {
         ESP_LOGI(TAG, "%s needs an updated trigger", celebrations[i].id);
 

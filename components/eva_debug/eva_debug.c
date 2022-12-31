@@ -46,9 +46,9 @@ static esp_err_t print_real_time_stats() {
   }
 
   // Match each task in start_array to those in the end_array
-  for (int i = 0; i < start_array_size; i++) {
+  for (size_t i = 0; i < start_array_size; i++) {
     int k = -1;
-    for (int j = 0; j < end_array_size; j++) {
+    for (size_t j = 0; j < end_array_size; j++) {
       if (start_array[i].xHandle == end_array[j].xHandle) {
         k = j;
         // Mark that task have been matched by overwriting their handles
@@ -66,12 +66,12 @@ static esp_err_t print_real_time_stats() {
   }
 
   // Print unmatched tasks
-  for (int i = 0; i < start_array_size; i++) {
+  for (size_t i = 0; i < start_array_size; i++) {
     if (start_array[i].xHandle != NULL) {
       ESP_LOGD(TAG, "task: %-15s -> deleted", start_array[i].pcTaskName);
     }
   }
-  for (int i = 0; i < end_array_size; i++) {
+  for (size_t i = 0; i < end_array_size; i++) {
     if (end_array[i].xHandle != NULL) {
       ESP_LOGD(TAG, "task: %-15s -> created", end_array[i].pcTaskName);
     }

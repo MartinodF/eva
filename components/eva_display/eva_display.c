@@ -38,7 +38,7 @@ static void emit_refresh() {
 
   int layer = (override_layer != LayersCount) ? override_layer : current_layer;
 
-  for (int i = 0; i < EVA_DISPLAY_PIXELS; i++) {
+  for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
     switch (layer) {
       case LayerClock:
         visible[i] = (has_bit(fb[LayerClock], i) ? White : Off) | (has_bit(fb[LayerEvents], i) ? Rainbow : Off);
@@ -57,10 +57,10 @@ static void emit_refresh() {
 
 #if CONFIG_LOG_DEFAULT_LEVEL >= 4  // ESP_LOG_DEBUG
 static void print_buffer() {
-  for (int layer = LayerBooting; layer < LayersCount; layer++) {
+  for (size_t layer = LayerBooting; layer < LayersCount; layer++) {
     printf("# Layer %d\n", layer);
 
-    for (int i = 0; i < EVA_DISPLAY_PIXELS; i++) {
+    for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
       bool enabled = has_bit(fb[layer], i);
 
       printf("%c", enabled ? characters[i] : '-');

@@ -7,7 +7,7 @@ static const char *TAG = "strings";
 static void set_char(frame buffer, float position, char c) {
   int match = 0;
 
-  for (int i = 0; font[i].letter != 0; i++) {
+  for (size_t i = 0; font[i].letter != 0; i++) {
     if (font[i].letter == c) {
       match = i;
       break;
@@ -19,8 +19,8 @@ static void set_char(frame buffer, float position, char c) {
   int offsetY = 2;
   int offsetX = roundf(position * (EVA_STRINGS_WIDTH + 1) + 1);
 
-  for (int y = 0; y < EVA_STRINGS_HEIGHT; y++) {
-    for (int x = 0; x < EVA_STRINGS_WIDTH; x++) {
+  for (size_t y = 0; y < EVA_STRINGS_HEIGHT; y++) {
+    for (size_t x = 0; x < EVA_STRINGS_WIDTH; x++) {
       if (font[match].code[y][x] == '#') {
         int n = EVA_DISPLAY_WIDTH * (y + offsetY) + x + offsetX;
         int word = n / EVA_DISPLAY_WORD_SIZE;
@@ -58,7 +58,7 @@ void strings_animate(char *str, uint8_t times, int layer) {
   frame_event_t event = {.layer = layer};
 
   while (times-- > 0) {
-    for (int index = 0; padded[index + 1]; index++) {
+    for (size_t index = 0; padded[index + 1]; index++) {
       render_string(padded + index, event.mem);
       ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_FRAME_EMIT, &event, sizeof(event), portMAX_DELAY));
 

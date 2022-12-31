@@ -66,7 +66,7 @@ static void handle_frame_emit(void *arg, esp_event_base_t event_base, int32_t ev
     return;
   }
 
-  for (int i = 0; i < EVA_DISPLAY_PIXELS; i++) {
+  for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
     if (fade[i].end != (*display)[i]) {
       fade[i].prev = fade[i].end;
       fade[i].start = time;
@@ -151,7 +151,7 @@ void led_loop(void *unused) {
       continue;
     }
 
-    for (int i = 0; i < EVA_DISPLAY_PIXELS; i++) {
+    for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
       // Rows alternate in a zig-zag pattern
       int row = i / EVA_DISPLAY_WIDTH;
       int column = (row % 2 == 0) ? (i % EVA_DISPLAY_WIDTH) : ((EVA_DISPLAY_WIDTH - 1) - (i % EVA_DISPLAY_WIDTH));

@@ -38,7 +38,7 @@ void light_loop(void *unused) {
     if (abs(values[current] - average) > EVA_LIGHT_THRESHOLD) {
       average = 0;
 
-      for (int i = 0; i < EVA_LIGHT_MEASUREMENTS; i++) {
+      for (size_t i = 0; i < EVA_LIGHT_MEASUREMENTS; i++) {
         average += values[i];
       }
 
