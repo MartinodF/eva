@@ -9,7 +9,7 @@ static celebration_t celebrations[] = {
     {.id = "new-year", .month = 0, .day = 1, .name = -1, .greeting = "HAPPY NEW YEAR!"},
     {.id = "greg", .month = 0, .day = 15, .name = Greg, .greeting = "HAPPY BIRTHDAY GREG!"},
     {.id = "mart", .month = 1, .day = 26, .name = Mart, .greeting = "HAPPY BIRTHDAY MART!"},
-    {.id = "june", .month = 3, .day = 1, .name = June, .greeting = "HAPPY MEOWDAY!"},
+    {.id = "june", .month = 2, .day = 21, .name = June, .greeting = "HAPPY MEOWDAY!"},
     {.id = "fede", .month = 8, .day = 3, .name = Fede, .greeting = "HAPPY BIRTHDAY FEDE!"},
     {.id = "anniversary", .month = 8, .day = 15, .name = FM, .greeting = "HAPPY ANNIVERSARY!"},
 };
