@@ -15,6 +15,6 @@
 #define EVA_LIGHT_MIN 15        // measured experimentally
 #define EVA_LIGHT_MAX 3230      // measured experimentally
 #define EVA_LIGHT_MEASUREMENTS 30
-#define EVA_LIGHT_THRESHOLD 1
+#define EVA_LIGHT_THRESHOLD 3
 
 void light_loop(void *);
