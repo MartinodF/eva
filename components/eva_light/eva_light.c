@@ -27,7 +27,7 @@ void light_loop(void *unused) {
   };
   ESP_ERROR_CHECK(adc_oneshot_config_channel(adc, EVA_LIGHT_ADC_CHANNEL, &chan_config));
 
-  int average;
+  int average = INT_MAX;
 
   for (;;) {
     ESP_ERROR_CHECK(adc_oneshot_read(adc, EVA_LIGHT_ADC_CHANNEL, &raw));
