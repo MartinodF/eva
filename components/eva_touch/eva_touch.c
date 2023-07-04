@@ -107,8 +107,7 @@ void touch_loop(void* unused) {
       touch_down = false;
 
       if (esp_timer_is_active(touch_timer)) {
-        ESP_ERROR_CHECK(esp_timer_stop(touch_timer));
-        ESP_ERROR_CHECK(esp_timer_start_once(touch_timer, EVA_TOUCH_DELAY * 1000));
+        ESP_ERROR_CHECK(esp_timer_restart(touch_timer, EVA_TOUCH_DELAY * 1000));
       }
     }
   }

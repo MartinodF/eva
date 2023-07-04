@@ -32,12 +32,12 @@ static void sntp_wifi_cb() {
   ESP_ERROR_CHECK(esp_timer_create(&timer_args, &sntp_expired_timer));
 
   // Enable SNTP time sync
-  sntp_setoperatingmode(SNTP_OPMODE_POLL);
-  sntp_setservername(0, EVA_TIMESERVER);
-  sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
-  sntp_set_sync_interval(EVA_SNTP_INTERVAL);
-  sntp_set_time_sync_notification_cb(sntp_sync_cb);
-  sntp_init();
+  esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
+  esp_sntp_setservername(0, EVA_TIMESERVER);
+  esp_sntp_set_sync_mode(SNTP_SYNC_MODE_IMMED);
+  esp_sntp_set_sync_interval(EVA_SNTP_INTERVAL);
+  esp_sntp_set_time_sync_notification_cb(sntp_sync_cb);
+  esp_sntp_init();
 }
 
 void sntp_start(void) {
