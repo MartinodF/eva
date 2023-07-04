@@ -7,6 +7,8 @@
 #include "eva_status.h"
 #include "eva_temp.h"
 
+#define EVA_STRINGS_FRAME_TIME 450  // ms
+
 enum Mode { Hi, Status, Light, Temp, ModeCount };
 
 void strings_animate(char *string, uint8_t times, int layer);

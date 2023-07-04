@@ -62,7 +62,7 @@ void strings_animate(char *str, uint8_t times, int layer) {
       render_string(padded + index, event.mem);
       ESP_ERROR_CHECK(esp_event_post(EVA_EVENT, EVA_FRAME_EMIT, &event, sizeof(event), portMAX_DELAY));
 
-      vTaskDelay(pdMS_TO_TICKS(450));
+      vTaskDelay(pdMS_TO_TICKS(EVA_STRINGS_FRAME_TIME));
     }
   }
 }
