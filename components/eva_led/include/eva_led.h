@@ -15,8 +15,8 @@
 #define EVA_LED_COLORS EVA_RMT_BYTES_PER_LED
 #define EVA_LED_GPIO_NUM GPIO_NUM_18
 #define EVA_ONBOARD_GPIO_NUM GPIO_NUM_13
-#define EVA_LED_FADE_DURATION pdMS_TO_TICKS(250)  // ms
-#define EVA_LED_INTERVAL pdMS_TO_TICKS(20)        // ms
+#define EVA_LED_FADE_DURATION 25  // ms
+#define EVA_LED_INTERVAL 20       // ms
 
 void led_loop(void*);
 

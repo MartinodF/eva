@@ -203,7 +203,7 @@ void led_loop(void *unused) {
 
     gpio_set_level(EVA_ONBOARD_GPIO_NUM, 0);
 
-    if (xTaskDelayUntil(&time, EVA_LED_INTERVAL) == pdFALSE) {
+    if (xTaskDelayUntil(&time, pdMS_TO_TICKS(EVA_LED_INTERVAL)) == pdFALSE) {
       ESP_LOGW(TAG, "led_loop saturated");
     }
   }
