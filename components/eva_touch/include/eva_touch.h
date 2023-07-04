@@ -9,7 +9,7 @@
 #include "freertos/task.h"
 
 #define EVA_TOUCH_TOUCH_NUM TOUCH_PAD_NUM5
-#define EVA_TOUCH_DELAY 250      // ms
+#define EVA_TOUCH_DELAY 350      // ms
 #define EVA_TOUCH_THRESHOLD 0.2  // 20%
 
 void touch_loop(void *unused);
