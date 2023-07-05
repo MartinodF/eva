@@ -22,7 +22,6 @@ static int current_layer = LayerClock;
 static int override_layer = LayerBooting;
 static buffer fb;
 static bool healthy = false;
-static pixels visible;
 
 static const char* TAG = "display";
 
@@ -34,7 +33,7 @@ static bool has_bit(frame a, int n) {
 }
 
 static void emit_refresh() {
-  memset(&visible, 0, sizeof(visible));
+  pixels visible;
 
   int layer = (override_layer != LayersCount) ? override_layer : current_layer;
 
