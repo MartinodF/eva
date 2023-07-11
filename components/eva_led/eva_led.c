@@ -116,18 +116,28 @@ void led_loop(void *unused) {
 
   gpio_set_direction(EVA_ONBOARD_GPIO_NUM, GPIO_MODE_OUTPUT);
 
-  rmt_leds_handle_t leds;
-  uint8_t data[EVA_DISPLAY_PIXELS * EVA_LED_COLORS];  // GRBW
+  led_strip_config_t strip_config = {
+      .strip_gpio_num = EVA_LED_GPIO_NUM,
+      .max_leds = EVA_DISPLAY_PIXELS,
+      .led_pixel_format = LED_PIXEL_FORMAT_GRBW,
+      .led_model = LED_MODEL_SK6812,
+  };
 
-  ESP_ERROR_CHECK(rmt_new_leds(EVA_LED_GPIO_NUM, EVA_DISPLAY_PIXELS, data, &leds));
+  led_strip_rmt_config_t rmt_config = {
+      .clk_src = RMT_CLK_SRC_XTAL,
+      .resolution_hz = EVA_LED_RESOLUTION_HZ,
+      .flags.with_dma = true,
+  };
+
+  led_strip_handle_t leds;
+  ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &leds));
+
   memset(fade, 0, sizeof(fade));
 
   fade_barrier = xSemaphoreCreateBinary();
   xSemaphoreGive(fade_barrier);
 
-  uint32_t r;
-  uint32_t g;
-  uint32_t b;
+  uint32_t r, g, b, w;
 
   esp_event_handler_instance_t display_handle = NULL;
   ESP_ERROR_CHECK(
@@ -164,14 +174,16 @@ void led_loop(void *unused) {
           int ledhue = hue + 5 * (row + (i % EVA_DISPLAY_WIDTH));
           hs2rgb(ledhue, 100, &r, &g, &b);
 
-          data[led * EVA_LED_COLORS + 0] = scale * g;
-          data[led * EVA_LED_COLORS + 1] = scale * r;
-          data[led * EVA_LED_COLORS + 2] = scale * b;
+          r = scale * r;
+          g = scale * g;
+          b = scale * b;
         } else {
-          memset(&data[led * EVA_LED_COLORS], 0, 3 * sizeof(uint8_t));
+          r = 0;
+          g = 0;
+          b = 0;
         }
 
-        data[led * EVA_LED_COLORS + 3] = scale * ((fade[i].end & White) ? 0xff : 0);
+        w = scale * ((fade[i].end & White) ? 0xff : 0);
       } else {
         float_t time_t = tween(time, fade[i].start, EVA_LED_FADE_DURATION);
 
@@ -184,20 +196,24 @@ void led_loop(void *unused) {
           int ledhue = hue + 5 * (row + (i % EVA_DISPLAY_WIDTH));
           hs2rgb(ledhue, 100, &r, &g, &b);
 
-          data[led * EVA_LED_COLORS + 0] = scale * g * ((1 - time_t) * c_prev + time_t * c_end);
-          data[led * EVA_LED_COLORS + 1] = scale * r * ((1 - time_t) * c_prev + time_t * c_end);
-          data[led * EVA_LED_COLORS + 2] = scale * b * ((1 - time_t) * c_prev + time_t * c_end);
+          r = scale * r * ((1 - time_t) * c_prev + time_t * c_end);
+          g = scale * g * ((1 - time_t) * c_prev + time_t * c_end);
+          b = scale * b * ((1 - time_t) * c_prev + time_t * c_end);
         } else {
-          memset(&data[led * EVA_LED_COLORS], 0, 3 * sizeof(uint8_t));
+          r = 0;
+          g = 0;
+          b = 0;
         }
 
-        data[led * EVA_LED_COLORS + 3] = scale * 0xff * ((1 - time_t) * w_prev + time_t * w_end);
+        w = scale * 0xff * ((1 - time_t) * w_prev + time_t * w_end);
       }
+
+      ESP_ERROR_CHECK(led_strip_set_pixel_rgbw(leds, led, r, g, b, w));
     }
 
     xSemaphoreGive(fade_barrier);
 
-    ESP_ERROR_CHECK(rmt_leds_send(leds));
+    ESP_ERROR_CHECK(led_strip_refresh(leds));
 
     hue += 1;
 
@@ -211,7 +227,7 @@ void led_loop(void *unused) {
   ESP_ERROR_CHECK(esp_event_handler_instance_unregister(EVA_EVENT, EVA_DISPLAY_REFRESH, display_handle));
   ESP_ERROR_CHECK(esp_event_handler_instance_unregister(EVA_EVENT, EVA_LIGHT_UPDATE, light_handle));
 
-  ESP_ERROR_CHECK(rmt_leds_del(leds));
+  ESP_ERROR_CHECK(led_strip_del(leds));
 
   ESP_LOGW(TAG, "light_loop exited");
 }

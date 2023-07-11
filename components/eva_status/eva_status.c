@@ -1,7 +1,6 @@
 #include "eva_status.h"
 
-static uint8_t pixel[EVA_LED_COLORS];  // GRBW
-static rmt_leds_handle_t led = NULL;
+static led_strip_handle_t led = NULL;
 static bool status[StatusesCount] = {0};
 
 static const char* TAG = "status";
@@ -28,12 +27,13 @@ static void handle_status(void* arg, esp_event_base_t event_base, int32_t event_
   ESP_LOGI(TAG, "WiFi: %s", status[WiFi] ? "healthy" : "unhealthy");
   ESP_LOGI(TAG, "SNTP: %s", status[SNTP] ? "healthy" : "unhealthy");
 
-  pixel[0] = (ok ? 0xff : partial ? 0xff : 0x00) * EVA_STATUS_BRIGHTNESS;  // G
-  pixel[1] = (ok ? 0x00 : partial ? 0xff : 0xff) * EVA_STATUS_BRIGHTNESS;  // R
-  pixel[2] = (ok ? 0x00 : partial ? 0x00 : 0x00) * EVA_STATUS_BRIGHTNESS;  // B
-  pixel[3] = 0 * EVA_STATUS_BRIGHTNESS;                                    // W
+  uint32_t r = (ok ? 0x00 : partial ? 0xff : 0xff) * EVA_STATUS_BRIGHTNESS;
+  uint32_t g = (ok ? 0xff : partial ? 0xff : 0x00) * EVA_STATUS_BRIGHTNESS;
+  uint32_t b = (ok ? 0x00 : partial ? 0x00 : 0x00) * EVA_STATUS_BRIGHTNESS;
+  uint32_t w = 0 * EVA_STATUS_BRIGHTNESS;
 
-  ESP_ERROR_CHECK(rmt_leds_send(led));
+  ESP_ERROR_CHECK(led_strip_set_pixel_rgbw(led, 0, r, g, b, w));
+  ESP_ERROR_CHECK(led_strip_refresh(led));
 
   if (ok) {
     char reason[2] = "OK";
@@ -52,7 +52,19 @@ static void handle_status(void* arg, esp_event_base_t event_base, int32_t event_
 void status_start() {
   ESP_LOGI(TAG, "status_start");
 
-  ESP_ERROR_CHECK(rmt_new_leds(EVA_STATUS_GPIO, 1, pixel, &led));
+  led_strip_config_t strip_config = {
+      .strip_gpio_num = EVA_STATUS_GPIO,
+      .max_leds = 1,
+      .led_pixel_format = LED_PIXEL_FORMAT_GRBW,
+      .led_model = LED_MODEL_SK6812,
+  };
+
+  led_strip_rmt_config_t rmt_config = {
+      .clk_src = RMT_CLK_SRC_XTAL,
+      .resolution_hz = EVA_LED_RESOLUTION_HZ,
+  };
+
+  ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led));
 
   ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_SNTP_HEALTHY, handle_status, NULL, NULL));
   ESP_ERROR_CHECK(esp_event_handler_instance_register(EVA_EVENT, EVA_SNTP_UNHEALTHY, handle_status, NULL, NULL));
