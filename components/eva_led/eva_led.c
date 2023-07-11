@@ -5,8 +5,9 @@ static uint32_t light_time = 0;
 static int light_prev = 0;
 static int light_end = 0;
 
-SemaphoreHandle_t fade_barrier = NULL;
+SemaphoreHandle_t barrier = NULL;
 static fading fade[EVA_DISPLAY_PIXELS];
+static bool needs_refreshing = true;
 
 static const char *TAG = "led";
 
@@ -61,20 +62,22 @@ static void handle_frame_emit(void *arg, esp_event_base_t event_base, int32_t ev
 
   pixels *display = (pixels *)event_data;
 
-  if (xSemaphoreTake(fade_barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
+  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
     ESP_LOGW(TAG, "failed acquiring lock to handle frame");
     return;
   }
 
   for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
     if (fade[i].end != (*display)[i]) {
+      needs_refreshing = true;
+
       fade[i].prev = fade[i].end;
       fade[i].start = time;
       fade[i].end = (*display)[i];
     }
   }
 
-  xSemaphoreGive(fade_barrier);
+  xSemaphoreGive(barrier);
 }
 
 static void handle_light_update(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
@@ -82,9 +85,18 @@ static void handle_light_update(void *arg, esp_event_base_t event_base, int32_t 
 
   uint32_t time = xTaskGetTickCount();
 
+  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
+    ESP_LOGW(TAG, "failed acquiring lock to handle light");
+    return;
+  }
+
+  needs_refreshing = true;
+
   light_time = time;
   light_prev = light_end;
   light_end = *((int *)event_data);
+
+  xSemaphoreGive(barrier);
 }
 
 static float_t interpolate(float_t x, uint32_t from, uint32_t to) {
@@ -134,8 +146,8 @@ void led_loop(void *unused) {
 
   memset(fade, 0, sizeof(fade));
 
-  fade_barrier = xSemaphoreCreateBinary();
-  xSemaphoreGive(fade_barrier);
+  barrier = xSemaphoreCreateBinary();
+  xSemaphoreGive(barrier);
 
   uint32_t r, g, b, w;
 
@@ -150,16 +162,33 @@ void led_loop(void *unused) {
   uint32_t time = xTaskGetTickCount();
 
   for (;;) {
-    gpio_set_level(EVA_ONBOARD_GPIO_NUM, 1);
+    if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
+      ESP_LOGW(TAG, "failed acquiring lock to update LEDs");
+      continue;
+    }
+
+    // If no tweens are in progress, avoid refreshing
+    if (!needs_refreshing) {
+      xSemaphoreGive(barrier);
+
+      if (xTaskDelayUntil(&time, pdMS_TO_TICKS(EVA_LED_INTERVAL)) == pdFALSE) {
+        ESP_LOGW(TAG, "led_loop saturated");
+      }
+
+      continue;
+    }
+
+    ESP_LOGD(TAG, "refreshing leds");
+    ESP_ERROR_CHECK(gpio_set_level(EVA_ONBOARD_GPIO_NUM, 1));
 
     // LED brightness varies from 1% to 55% depending on measured light
     float_t light_t = tween(time, light_time, EVA_LED_FADE_DURATION);
     float_t scale = 0.01f + 0.54f * interpolate(light_t, light_prev, light_end) / 100;
 
-    if (xSemaphoreTake(fade_barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
-      ESP_LOGW(TAG, "failed acquiring lock to update LEDs");
-      continue;
-    }
+    // If the light level tween is done, no need to refresh for it
+    bool last_refresh = time >= light_time + EVA_LED_FADE_DURATION;
+
+    hue = time / pdMS_TO_TICKS(EVA_LED_INTERVAL);
 
     for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
       // Rows alternate in a zig-zag pattern
@@ -168,9 +197,12 @@ void led_loop(void *unused) {
 
       int led = row * EVA_DISPLAY_WIDTH + column;
 
-      // Fast path when all tweens are done
+      // Fast path when we're not tweening
       if (time >= fade[i].start + EVA_LED_FADE_DURATION) {
         if (fade[i].end & Rainbow) {
+          // Colors require continuous refreshing
+          last_refresh = false;
+
           int ledhue = hue + 5 * (row + (i % EVA_DISPLAY_WIDTH));
           hs2rgb(ledhue, 100, &r, &g, &b);
 
@@ -185,6 +217,9 @@ void led_loop(void *unused) {
 
         w = scale * ((fade[i].end & White) ? 0xff : 0);
       } else {
+        // Some leds are still tweening
+        last_refresh = false;
+
         float_t time_t = tween(time, fade[i].start, EVA_LED_FADE_DURATION);
 
         bool w_prev = (fade[i].prev & White) ? 1 : 0;
@@ -211,13 +246,12 @@ void led_loop(void *unused) {
       ESP_ERROR_CHECK(led_strip_set_pixel_rgbw(leds, led, r, g, b, w));
     }
 
-    xSemaphoreGive(fade_barrier);
+    needs_refreshing = !last_refresh;
+
+    xSemaphoreGive(barrier);
 
     ESP_ERROR_CHECK(led_strip_refresh(leds));
-
-    hue += 1;
-
-    gpio_set_level(EVA_ONBOARD_GPIO_NUM, 0);
+    ESP_ERROR_CHECK(gpio_set_level(EVA_ONBOARD_GPIO_NUM, 0));
 
     if (xTaskDelayUntil(&time, pdMS_TO_TICKS(EVA_LED_INTERVAL)) == pdFALSE) {
       ESP_LOGW(TAG, "led_loop saturated");
