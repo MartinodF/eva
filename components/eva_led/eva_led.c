@@ -11,7 +11,7 @@ static bool needs_refreshing = true;
 
 static const char *TAG = "led";
 
-void hs2rgb(uint32_t h, uint32_t s, uint32_t *r, uint32_t *g, uint32_t *b) {
+static void hs2rgb(uint32_t h, uint32_t s, uint32_t *r, uint32_t *g, uint32_t *b) {
   h %= 360;
   uint32_t rgb_max = 0xff;
   uint32_t rgb_min = rgb_max * (100 - s) / 100.0f;
@@ -55,50 +55,6 @@ void hs2rgb(uint32_t h, uint32_t s, uint32_t *r, uint32_t *g, uint32_t *b) {
   }
 }
 
-static void handle_frame_emit(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
-  ESP_LOGD(TAG, "received frame...");
-
-  uint32_t time = xTaskGetTickCount();
-
-  pixels *display = (pixels *)event_data;
-
-  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
-    ESP_LOGW(TAG, "failed acquiring lock to handle frame");
-    return;
-  }
-
-  for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
-    if (fade[i].end != (*display)[i]) {
-      needs_refreshing = true;
-
-      fade[i].prev = fade[i].end;
-      fade[i].start = time;
-      fade[i].end = (*display)[i];
-    }
-  }
-
-  xSemaphoreGive(barrier);
-}
-
-static void handle_light_update(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
-  ESP_LOGD(TAG, "received light update...");
-
-  uint32_t time = xTaskGetTickCount();
-
-  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
-    ESP_LOGW(TAG, "failed acquiring lock to handle light");
-    return;
-  }
-
-  needs_refreshing = true;
-
-  light_time = time;
-  light_prev = light_end;
-  light_end = *((int *)event_data);
-
-  xSemaphoreGive(barrier);
-}
-
 static float_t interpolate(float_t x, uint32_t from, uint32_t to) {
   if (x >= 1.0f) {
     return to;
@@ -121,6 +77,63 @@ static float_t tween(uint32_t t, uint32_t t0, uint32_t duration) {
   }
 
   return ((float_t)t - t0) / duration;
+}
+
+static void handle_frame_emit(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
+  ESP_LOGD(TAG, "received frame...");
+
+  uint32_t time = xTaskGetTickCount();
+
+  pixels *display = (pixels *)event_data;
+
+  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
+    ESP_LOGW(TAG, "failed acquiring lock to handle frame");
+    return;
+  }
+
+  for (size_t i = 0; i < EVA_DISPLAY_PIXELS; i++) {
+    if ((fade[i].endW == 0 && ((*display)[i] & White) == 0) ||
+        (fade[i].endW == 0xFF && ((*display)[i] & White) == White)) {
+      if ((fade[i].endR == 0 && ((*display)[i] & Rainbow) == 0) ||
+          (fade[i].endR == 0xFF && ((*display)[i] & Rainbow) == Rainbow)) {
+        // No change
+        continue;
+      }
+    }
+
+    needs_refreshing = true;
+
+    float_t time_t = tween(time, fade[i].start, EVA_LED_FADE_DURATION);
+
+    fade[i].start = time;
+    fade[i].prevW = interpolate(time_t, fade[i].prevW, fade[i].endW);
+    fade[i].prevR = interpolate(time_t, fade[i].prevR, fade[i].endR);
+    fade[i].endW = ((*display)[i] & White) == White ? 0xFF : 0;
+    fade[i].endR = ((*display)[i] & Rainbow) == Rainbow ? 0xFF : 0;
+  }
+
+  xSemaphoreGive(barrier);
+}
+
+static void handle_light_update(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
+  ESP_LOGD(TAG, "received light update...");
+
+  uint32_t time = xTaskGetTickCount();
+
+  if (xSemaphoreTake(barrier, pdMS_TO_TICKS(EVA_LED_INTERVAL)) != pdTRUE) {
+    ESP_LOGW(TAG, "failed acquiring lock to handle light");
+    return;
+  }
+
+  needs_refreshing = true;
+
+  float_t time_t = tween(time, light_time, EVA_LED_FADE_DURATION);
+
+  light_time = time;
+  light_prev = interpolate(time_t, light_prev, light_end);
+  light_end = *((int *)event_data);
+
+  xSemaphoreGive(barrier);
 }
 
 void led_loop(void *unused) {
@@ -199,48 +212,45 @@ void led_loop(void *unused) {
 
       // Fast path when we're not tweening
       if (time >= fade[i].start + EVA_LED_FADE_DURATION) {
-        if (fade[i].end & Rainbow) {
+        if (fade[i].endR > 0) {
           // Colors require continuous refreshing
           last_refresh = false;
 
           int ledhue = hue + 5 * (row + (i % EVA_DISPLAY_WIDTH));
           hs2rgb(ledhue, 100, &r, &g, &b);
 
-          r = scale * r;
-          g = scale * g;
-          b = scale * b;
+          r = scale * r * fade[i].endR / 0xFF;
+          g = scale * g * fade[i].endR / 0xFF;
+          b = scale * b * fade[i].endR / 0xFF;
         } else {
           r = 0;
           g = 0;
           b = 0;
         }
 
-        w = scale * ((fade[i].end & White) ? 0xff : 0);
+        w = scale * fade[i].endW;
       } else {
         // Some leds are still tweening
         last_refresh = false;
 
         float_t time_t = tween(time, fade[i].start, EVA_LED_FADE_DURATION);
 
-        bool w_prev = (fade[i].prev & White) ? 1 : 0;
-        bool c_prev = (fade[i].prev & Rainbow) ? 1 : 0;
-        bool w_end = (fade[i].end & White) ? 1 : 0;
-        bool c_end = (fade[i].end & Rainbow) ? 1 : 0;
-
-        if ((fade[i].prev & Rainbow) || (fade[i].end & Rainbow)) {
+        if ((fade[i].prevR > 0) || (fade[i].endR > 0)) {
           int ledhue = hue + 5 * (row + (i % EVA_DISPLAY_WIDTH));
           hs2rgb(ledhue, 100, &r, &g, &b);
 
-          r = scale * r * ((1 - time_t) * c_prev + time_t * c_end);
-          g = scale * g * ((1 - time_t) * c_prev + time_t * c_end);
-          b = scale * b * ((1 - time_t) * c_prev + time_t * c_end);
+          int value = interpolate(time_t, fade[i].prevR, fade[i].endR);
+
+          r = scale * r * value / 0xFF;
+          g = scale * g * value / 0xFF;
+          b = scale * b * value / 0xFF;
         } else {
           r = 0;
           g = 0;
           b = 0;
         }
 
-        w = scale * 0xff * ((1 - time_t) * w_prev + time_t * w_end);
+        w = scale * interpolate(time_t, fade[i].prevW, fade[i].endW);
       }
 
       ESP_ERROR_CHECK(led_strip_set_pixel_rgbw(leds, led, r, g, b, w));

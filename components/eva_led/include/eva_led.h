@@ -22,6 +22,8 @@ void led_loop(void*);
 
 typedef struct fading {
   uint32_t start;
-  int prev;
-  int end;
+  int prevW;
+  int endW;
+  int prevR;
+  int endR;
 } fading;
