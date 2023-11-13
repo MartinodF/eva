@@ -148,14 +148,14 @@ void led_loop(void *unused) {
       .led_model = LED_MODEL_SK6812,
   };
 
-  led_strip_rmt_config_t rmt_config = {
+  led_strip_spi_config_t spi_config = {
       .clk_src = RMT_CLK_SRC_XTAL,
-      .resolution_hz = EVA_LED_RESOLUTION_HZ,
+      .spi_bus = SPI2_HOST,
       .flags.with_dma = true,
   };
 
   led_strip_handle_t leds;
-  ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &leds));
+  ESP_ERROR_CHECK(led_strip_new_spi_device(&strip_config, &spi_config, &leds));
 
   memset(fade, 0, sizeof(fade));
 
